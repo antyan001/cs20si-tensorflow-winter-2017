@@ -1,0 +1,8 @@
+tensorflow APIs:
+
+- TF Learn (tf.contrib.learn):  LinearClassifier, LinearRegressor, DNNClassifier, ...
+- TF-Slim (tf.contrib.slim)
+- High level APIs:
+  - keras
+  - tflearn (Aymeric Damien)
+  - prettytensor
