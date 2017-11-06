@@ -49,7 +49,7 @@ with tf.Session() as sess:
   sess.run(tf.global_variables_initializer())
   writer = tf.summary.FileWriter('/tmp/linear-reg', sess.graph)
 
-# Step 8: train the model
+  # Step 8: train the model
   for i in range(100):  # run 100 epochs
     total_loss = 0
     for train_x, train_y in data:
