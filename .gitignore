@@ -11,6 +11,6 @@ examples/chatbot/data_analysis.py
 assignments/chatbot/processed/*
 
 examples/data/*.zip
-*.tsv
+examples/processed/*
 
 workspace.xml
