@@ -1,6 +1,7 @@
 """ A clean, no_frills character-level generative language model.
 Created by Danijar Hafner (danijar.com), edited by Chip Huyen
 for the class CS 20SI: "TensorFlow for Deep Learning Research"
+http://web.stanford.edu/class/cs20si/lectures/slides_11.pdf
 
 Based on Andrej Karpathy's blog: 
 http://karpathy.github.io/2015/05/21/rnn-effectiveness/
@@ -66,6 +67,8 @@ in_state = tf.placeholder_with_default(cell.zero_state(tf.shape(seq_one_hot)[0],
                                        shape=[None, HIDDEN_SIZE])
 # this line to calculate the real length of seq
 # all seq are padded to be of the same length which is NUM_STEPS
+# The details of this expression here:
+# https://danijar.com/variable-sequence-lengths-in-tensorflow/
 length = tf.reduce_sum(tf.reduce_max(tf.sign(seq_one_hot), 2), 1)
 output, out_state = tf.nn.dynamic_rnn(cell, seq_one_hot, length, in_state)
 # fully_connected is syntactic sugar for tf.matmul(w, output) + b
