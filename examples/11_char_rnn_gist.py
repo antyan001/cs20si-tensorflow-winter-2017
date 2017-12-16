@@ -61,19 +61,32 @@ def read_batch(stream, batch_size=BATCH_SIZE):
 seq = tf.placeholder(tf.int32, [None, None])
 temp = tf.placeholder(tf.float32)
 
-seq_one_hot = tf.one_hot(seq, len(vocab))
+# Correct one_hot encoding with -1
+# See https://github.com/chiphuyen/stanford-tensorflow-tutorials/pull/80
+seq_one_hot = tf.one_hot(seq - 1, len(vocab))
+
 cell = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
-in_state = tf.placeholder_with_default(cell.zero_state(tf.shape(seq_one_hot)[0], tf.float32),
-                                       shape=[None, HIDDEN_SIZE])
-# this line to calculate the real length of seq
+zero_state = cell.zero_state(batch_size=tf.shape(seq_one_hot)[0], dtype=tf.float32)
+in_state = tf.placeholder_with_default(input=zero_state, shape=[None, HIDDEN_SIZE])
+
+# This line to calculate the real length of seq
 # all seq are padded to be of the same length which is NUM_STEPS
 # The details of this expression here:
 # https://danijar.com/variable-sequence-lengths-in-tensorflow/
-length = tf.reduce_sum(tf.reduce_max(tf.sign(seq_one_hot), 2), 1)
+# and in the `playground` file
+#
+# Original expression:
+# length = tf.reduce_sum(tf.reduce_max(tf.sign(seq_one_hot), 2), 1)
+length = tf.reduce_sum(tf.reduce_max(seq_one_hot, 2), 1)
 output, out_state = tf.nn.dynamic_rnn(cell, seq_one_hot, length, in_state)
+
 # fully_connected is syntactic sugar for tf.matmul(w, output) + b
 # it will create w and b for us
 logits = tf.contrib.layers.fully_connected(output, len(vocab), None)
+
+# Predict the *next* char in the sequence:
+# logits[:, :-1]       -> for each batch (axis=0) take all but the last item
+# seq_one_hot[:, 1:]   -> for each batch (axis=0) take all but the first item
 loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=logits[:, :-1], labels=seq_one_hot[:, 1:]))
 global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
 optimizer = tf.train.AdamOptimizer(LR).minimize(loss, global_step=global_step)
@@ -91,7 +104,7 @@ def online_inference(sess, seed='T'):
     if state is not None:
       feed.update({in_state: state})
     index, state = sess.run([sample, out_state], feed)
-    sentence += vocab_decode(index)
+    sentence += vocab_decode(index + 1)     # account for -1 in one_hot encoding
   print(sentence)
   print()
 
@@ -108,9 +121,10 @@ with tf.Session() as sess:
   if ckpt and ckpt.model_checkpoint_path:
     saver.restore(sess, ckpt.model_checkpoint_path)
 
-  for batch in read_batch(read_data('data/arvix_abstracts.txt')):
-    batch_loss, _, iteration = sess.run([loss, optimizer, global_step], {seq: batch})
-    if (iteration + 1) % SKIP_STEP == 0:
-      print('Iter=%d Loss=%.3f' % (iteration + 1, batch_loss))
-      online_inference(sess)
-      saver.save(sess, 'checkpoints/arvix/char-rnn', iteration)
+  for epoch in range(10):
+    for batch in read_batch(read_data('data/arvix_abstracts.txt')):
+      batch_loss, _, iteration = sess.run([loss, optimizer, global_step], feed_dict={seq: batch})
+      if (iteration + 1) % SKIP_STEP == 0:
+        print('Iter=%d Loss=%.3f' % (iteration + 1, batch_loss))
+        online_inference(sess)
+        saver.save(sess, 'checkpoints/arvix/char-rnn', iteration)
