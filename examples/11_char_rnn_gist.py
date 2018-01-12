@@ -111,20 +111,20 @@ def online_inference(sess, seed='T'):
 
 # Training
 utils.make_dir('checkpoints')
-utils.make_dir('checkpoints/arvix')
+utils.make_dir('checkpoints/arxiv')
 saver = tf.train.Saver(max_to_keep=2)
 with tf.Session() as sess:
   writer = tf.summary.FileWriter('graphs/gist', sess.graph)
   sess.run(tf.global_variables_initializer())
 
-  ckpt = tf.train.get_checkpoint_state(os.path.dirname('checkpoints/arvix/checkpoint'))
+  ckpt = tf.train.get_checkpoint_state(os.path.dirname('checkpoints/arxiv/checkpoint'))
   if ckpt and ckpt.model_checkpoint_path:
     saver.restore(sess, ckpt.model_checkpoint_path)
 
   for epoch in range(10):
-    for batch in read_batch(read_data('data/arvix_abstracts.txt')):
+    for batch in read_batch(read_data('data/arxiv_abstracts.txt')):
       batch_loss, _, iteration = sess.run([loss, optimizer, global_step], feed_dict={seq: batch})
       if (iteration + 1) % SKIP_STEP == 0:
         print('Iter=%d Loss=%.3f' % (iteration + 1, batch_loss))
         online_inference(sess)
-        saver.save(sess, 'checkpoints/arvix/char-rnn', iteration)
+        saver.save(sess, 'checkpoints/arxiv/char-rnn', iteration)

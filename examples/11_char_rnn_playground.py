@@ -77,5 +77,5 @@ with tf.Session() as sess:
   process_batch([[1, 2, 4, 5, 0, 0, 0]])
   process_batch([[1, 2, 4, 5]])
 
-  # for batch in read_batch(read_data('data/arvix_abstracts.txt')):
+  # for batch in read_batch(read_data('data/arxiv_abstracts.txt')):
   #   process_batch(batch)
