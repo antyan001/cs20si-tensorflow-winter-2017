@@ -1,14 +1,10 @@
-*.pdf
 *.SUNet
 *.pyc
 
 examples/checkpoints/*
 
-examples/chatbot/processed/*
-examples/chatbot/checkpoints/*
-examples/chatbot/data_analysis.py
-
 assignments/chatbot/processed/*
+assignments/chatbot/checkpoints/*
 assignments/data/cornell-movie-dialogs-corpus/*
 
 examples/data/*.zip
