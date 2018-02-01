@@ -48,7 +48,7 @@ class ChatBotModel(object):
     print('Create inference')
     # If we use sampled softmax, we need an output projection.
     # Sampled softmax only makes sense if we sample less than vocabulary size.
-    if config.NUM_SAMPLES > 0 and config.NUM_SAMPLES < config.DEC_VOCAB:
+    if 0 < config.NUM_SAMPLES < config.DEC_VOCAB:
       w = tf.get_variable('proj_w', [config.HIDDEN_SIZE, config.DEC_VOCAB])
       b = tf.get_variable('proj_b', [config.DEC_VOCAB])
       self.output_projection = (w, b)
@@ -72,7 +72,9 @@ class ChatBotModel(object):
 
     def _seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
       return tf.contrib.legacy_seq2seq.embedding_attention_seq2seq(
-        encoder_inputs, decoder_inputs, self.cell,
+        encoder_inputs=encoder_inputs,
+        decoder_inputs=decoder_inputs,
+        cell=self.cell,
         num_encoder_symbols=config.ENC_VOCAB,
         num_decoder_symbols=config.DEC_VOCAB,
         embedding_size=config.HIDDEN_SIZE,
@@ -105,9 +107,10 @@ class ChatBotModel(object):
         softmax_loss_function=self.softmax_loss_function)
     print('Time:', time.time() - start)
 
-  def _creat_optimizer(self):
-    print('Create optimizer... \nIt might take a couple of minutes depending on how many buckets you have.')
-    with tf.variable_scope('training') as scope:
+  def _create_optimizer(self):
+    print('Create optimizer... \n'
+          'It might take a couple of minutes depending on how many buckets you have.')
+    with tf.variable_scope('training'):
       self.global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
 
       if not self.fw_only:
@@ -133,5 +136,5 @@ class ChatBotModel(object):
     self._create_placeholders()
     self._inference()
     self._create_loss()
-    self._creat_optimizer()
+    self._create_optimizer()
     self._create_summary()
