@@ -128,7 +128,7 @@ def _eval_test_set(sess, model, test_buckets):
   """ Evaluate on the test set. """
   for bucket_id in range(len(config.BUCKETS)):
     if len(test_buckets[bucket_id]) == 0:
-      print("  Test: empty bucket %d" % (bucket_id))
+      print("  Test: empty bucket %d" % bucket_id)
       continue
     start = time.time()
     encoder_inputs, decoder_inputs, decoder_masks = data.get_batch(test_buckets[bucket_id],
@@ -168,13 +168,11 @@ def train():
 
       if iteration % skip_step == 0:
         print('Iter {}: loss {}, time {}'.format(iteration, total_loss / skip_step, time.time() - start))
-        start = time.time()
         total_loss = 0
         saver.save(sess, os.path.join(config.CPT_PATH, 'chatbot'), global_step=model.global_step)
         if iteration % (10 * skip_step) == 0:
           # Run evals on development set and print their loss
           _eval_test_set(sess, model, test_buckets)
-          start = time.time()
         sys.stdout.flush()
 
 
@@ -234,9 +232,8 @@ def chat():
       output_file.write('HUMAN ++++ ' + line + '\n')
       # Get token-ids for the input sentence.
       token_ids = data.sentence2id(enc_vocab, str(line))
-      if (len(token_ids) > max_length):
+      if len(token_ids) > max_length:
         print('Max length I can handle is:', max_length)
-        line = _get_user_input()
         continue
       # Which bucket does it belong to?
       bucket_id = _find_right_bucket(len(token_ids))
