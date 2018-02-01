@@ -18,10 +18,10 @@ from __future__ import print_function
 
 import time
 
-import numpy as np
 import tensorflow as tf
 
 import config
+
 
 class ChatBotModel(object):
     def __init__(self, forward_only, batch_size):
@@ -53,10 +53,13 @@ class ChatBotModel(object):
             b = tf.get_variable('proj_b', [config.DEC_VOCAB])
             self.output_projection = (w, b)
 
-        def sampled_loss(inputs, labels):
+        def sampled_loss(logits, labels):
             labels = tf.reshape(labels, [-1, 1])
-            return tf.nn.sampled_softmax_loss(tf.transpose(w), b, inputs, labels, 
-                                              config.NUM_SAMPLES, config.DEC_VOCAB)
+            return tf.nn.sampled_softmax_loss(weights=tf.transpose(w), biases=b,
+                                              labels=labels,
+                                              inputs=logits,
+                                              num_sampled=config.NUM_SAMPLES,
+                                              num_classes=config.DEC_VOCAB)
         self.softmax_loss_function = sampled_loss
 
         single_cell = tf.nn.rnn_cell.GRUCell(config.HIDDEN_SIZE)
@@ -66,7 +69,7 @@ class ChatBotModel(object):
         print('Creating loss... \nIt might take a couple of minutes depending on how many buckets you have.')
         start = time.time()
         def _seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
-            return tf.nn.seq2seq.embedding_attention_seq2seq(
+            return tf.contrib.legacy_seq2seq.embedding_attention_seq2seq(
                     encoder_inputs, decoder_inputs, self.cell,
                     num_encoder_symbols=config.ENC_VOCAB,
                     num_decoder_symbols=config.DEC_VOCAB,
@@ -75,7 +78,7 @@ class ChatBotModel(object):
                     feed_previous=do_decode)
 
         if self.fw_only:
-            self.outputs, self.losses = tf.nn.seq2seq.model_with_buckets(
+            self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
                                         self.encoder_inputs, 
                                         self.decoder_inputs, 
                                         self.targets,
@@ -90,7 +93,7 @@ class ChatBotModel(object):
                                             self.output_projection[0]) + self.output_projection[1]
                                             for output in self.outputs[bucket]]
         else:
-            self.outputs, self.losses = tf.nn.seq2seq.model_with_buckets(
+            self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
                                         self.encoder_inputs, 
                                         self.decoder_inputs, 
                                         self.targets,
