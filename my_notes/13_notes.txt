@@ -1,0 +1,24 @@
+The chatbot model is based on NMT model.
+
+Actual seq2seq
+--------------
+
+The latest MNT:
+
+  https://www.tensorflow.org/versions/master/tutorials/seq2seq
+  https://github.com/tensorflow/nmt
+
+Legacy
+------
+
+Original chatbot code used legacy seq2seq API:
+
+  https://www.tensorflow.org/versions/r1.0/tutorials/seq2seq
+  https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/legacy_seq2seq/python/ops/seq2seq.py
+
+Also relevant:
+
+  "Fundamentals of Deep Learning: Designing Next-Generation Machine Intelligence Algorithms" book,
+  Chapter 7, Dissecting a Neural Translation Network
+
+  https://github.com/tensorflow/tensorflow/tree/r0.7/tensorflow/models/rnn/translate
