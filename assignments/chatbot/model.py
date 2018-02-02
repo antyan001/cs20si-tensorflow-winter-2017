@@ -19,6 +19,7 @@ from __future__ import print_function
 import time
 
 import tensorflow as tf
+import tensorflow.contrib.legacy_seq2seq as seq2seq
 
 import config
 
@@ -31,26 +32,30 @@ class ChatBotModel(object):
     self.fw_only = forward_only
     self.batch_size = batch_size
 
+  def build_graph(self):
+    self._create_placeholders()
+    self._inference()
+    self._create_loss()
+    self._create_optimizer()
+    self._create_summary()
+
   def _create_placeholders(self):
     # Feeds for inputs. It's a list of placeholders
-    print('Create placeholders')
-    self.encoder_inputs = [tf.placeholder(tf.int32, shape=[None], name='encoder{}'.format(i))
-                           for i in range(config.BUCKETS[-1][0])]
-    self.decoder_inputs = [tf.placeholder(tf.int32, shape=[None], name='decoder{}'.format(i))
-                           for i in range(config.BUCKETS[-1][1] + 1)]
-    self.decoder_masks = [tf.placeholder(tf.float32, shape=[None], name='mask{}'.format(i))
-                          for i in range(config.BUCKETS[-1][1] + 1)]
+    max_bucket = config.BUCKETS[-1]
+    self.encoder_inputs = [tf.placeholder(tf.int32, shape=[None], name='encoder%d' % i) for i in range(max_bucket[0])]
+    self.decoder_inputs = [tf.placeholder(tf.int32, shape=[None], name='decoder%d' % i) for i in range(max_bucket[1] + 1)]
+    self.decoder_masks = [tf.placeholder(tf.float32, shape=[None], name='mask%d' % i) for i in range(max_bucket[1] + 1)]
 
     # Our targets are decoder inputs shifted by one (to ignore <s> symbol)
     self.targets = self.decoder_inputs[1:]
 
   def _inference(self):
-    print('Create inference')
     # If we use sampled softmax, we need an output projection.
     # Sampled softmax only makes sense if we sample less than vocabulary size.
+    self.output_projection = None
     if 0 < config.NUM_SAMPLES < config.DEC_VOCAB:
-      w = tf.get_variable('proj_w', [config.HIDDEN_SIZE, config.DEC_VOCAB])
-      b = tf.get_variable('proj_b', [config.DEC_VOCAB])
+      w = tf.get_variable('projection_w', [config.HIDDEN_SIZE, config.DEC_VOCAB])
+      b = tf.get_variable('projection_b', [config.DEC_VOCAB])
       self.output_projection = (w, b)
 
     def sampled_loss(logits, labels):
@@ -71,7 +76,7 @@ class ChatBotModel(object):
     start = time.time()
 
     def _seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
-      return tf.contrib.legacy_seq2seq.embedding_attention_seq2seq(
+      return seq2seq.embedding_attention_seq2seq(
         encoder_inputs=encoder_inputs,
         decoder_inputs=decoder_inputs,
         cell=self.cell,
@@ -82,7 +87,7 @@ class ChatBotModel(object):
         feed_previous=do_decode)
 
     if self.fw_only:
-      self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
+      self.outputs, self.losses = seq2seq.model_with_buckets(
         self.encoder_inputs,
         self.decoder_inputs,
         self.targets,
@@ -92,12 +97,11 @@ class ChatBotModel(object):
         softmax_loss_function=self.softmax_loss_function)
       # If we use output projection, we need to project outputs for decoding.
       if self.output_projection:
+        w, b = self.output_projection
         for bucket in range(len(config.BUCKETS)):
-          self.outputs[bucket] = [tf.matmul(output,
-                                            self.output_projection[0]) + self.output_projection[1]
-                                  for output in self.outputs[bucket]]
+          self.outputs[bucket] = [tf.matmul(output, w) + b for output in self.outputs[bucket]]
     else:
-      self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
+      self.outputs, self.losses = seq2seq.model_with_buckets(
         self.encoder_inputs,
         self.decoder_inputs,
         self.targets,
@@ -120,8 +124,7 @@ class ChatBotModel(object):
         self.train_ops = []
         start = time.time()
         for bucket in range(len(config.BUCKETS)):
-          clipped_grads, norm = tf.clip_by_global_norm(tf.gradients(self.losses[bucket],
-                                                                    trainables),
+          clipped_grads, norm = tf.clip_by_global_norm(tf.gradients(self.losses[bucket], trainables),
                                                        config.MAX_GRAD_NORM)
           self.gradient_norms.append(norm)
           self.train_ops.append(self.optimizer.apply_gradients(zip(clipped_grads, trainables),
@@ -131,10 +134,3 @@ class ChatBotModel(object):
 
   def _create_summary(self):
     pass
-
-  def build_graph(self):
-    self._create_placeholders()
-    self._inference()
-    self._create_loss()
-    self._create_optimizer()
-    self._create_summary()
